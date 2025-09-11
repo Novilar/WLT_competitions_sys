@@ -1,12 +1,24 @@
-from sqlalchemy import Column, String, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
-import uuid
-from app.database import Base
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from app import models, schemas
+from app.database import get_db
+from app.core.security import get_current_user  # берем юзера из токена
 
-class Application(Base):
-    __tablename__ = "applications"
+router = APIRouter()
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    competition_id = Column(UUID(as_uuid=True), ForeignKey("competitions.id"), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    status = Column(String, default="pending")
+@router.post("/", response_model=schemas.application.ApplicationOut)
+def create_application(
+    app_data: schemas.application.ApplicationCreate,
+    db: Session = Depends(get_db),
+    current_user: models.user.User = Depends(get_current_user) # <-- текущий юзер
+):
+    db_app = models.application.Application(
+        competition_id=app_data.competition_id,
+        user_id=current_user.id,  # <-- автоматом из токена
+        status=app_data.status,
+        profile=app_data.profile,
+    )
+    db.add(db_app)
+    db.commit()
+    db.refresh(db_app)
+    return db_app

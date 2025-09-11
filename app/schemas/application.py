@@ -1,16 +1,22 @@
 from pydantic import BaseModel
-from typing import Any
+from uuid import UUID
+from datetime import datetime
+from typing import Optional
 
 class ApplicationCreate(BaseModel):
-    competition_id: int
-    profile: Any  # Можно dict, но для упрощения Any
+    competition_id: UUID
+    status: str
+    profile: str
+
+
 
 class ApplicationOut(BaseModel):
-    id: int
-    competition_id: int
-    user_id: int
+    id: UUID
+    competition_id: UUID
+    user_id: UUID
     status: str
-    profile: Any
+    profile: str
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }

@@ -3,6 +3,7 @@ from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from app.database import Base
 
+# Определяем модель DrawNumber, которая соответствует таблице "draw_numbers" в базе данных
 class DrawNumber(Base):
     __tablename__ = "draw_numbers"
 

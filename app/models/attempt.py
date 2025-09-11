@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Integer, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from app.database import Base
 
+# Определяем модель Attempt, которая соответствует таблице "attempts" в базе данных
 class Attempt(Base):
     __tablename__ = "attempts"
 
@@ -10,4 +11,4 @@ class Attempt(Base):
     competition_id = Column(UUID(as_uuid=True), ForeignKey("competitions.id"), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     weight = Column(Integer, nullable=False)
-    success = Column(Boolean, default=False)
+    result = Column(String, nullable=False)
