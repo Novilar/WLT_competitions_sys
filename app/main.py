@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from app.database import init_db
 from fastapi.middleware.cors import CORSMiddleware
+from app.routers import competition_roles
+
+
 
 #Импортируем роутеры
 from app.routers import auth, competitions, applications, draw, attempts
@@ -24,6 +27,8 @@ app.include_router(competitions.router, prefix="/aboba", tags=["Aboba"]) # Ро�
 app.include_router(applications.router, prefix="/applications", tags=["Applications"]) # Роуты для заявок
 app.include_router(draw.router, prefix="/draw", tags=["Draw"]) # Роуты для жеребьёвки
 app.include_router(attempts.router, prefix="/attempts", tags=["Attempts"]) # Роуты для попыток спортсменов
+app.include_router(competition_roles.router)
+
 
 # Событие при старте приложения
 @app.on_event("startup")

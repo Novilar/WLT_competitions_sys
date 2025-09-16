@@ -1,1 +1,1 @@
-from app.schemas import user, competition, application, draw, attempt
+from app.schemas import user, competition, application, draw, attempt, competition_role
