@@ -33,3 +33,4 @@ class Token(BaseModel):
     token_type: str = "bearer"
     username: Optional[str] = None
     role: Optional[GlobalRole] = None
+

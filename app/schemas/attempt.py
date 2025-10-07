@@ -1,26 +1,24 @@
 from pydantic import BaseModel
 from uuid import UUID
+from typing import Optional
+from datetime import datetime
+from app.models.attempt import LiftType
 
 
-# Модель для создания новой попытки на соревновании
 class AttemptCreate(BaseModel):
-    competition_id: UUID
+    athlete_name: str
     weight: int
-    result: str  # "success" or "fail"
+    lift_type: LiftType
 
-    class Config:
-        from_attributes = True
-        arbitrary_types_allowed = True
 
-# Модель для вывода информации о попытке
 class AttemptOut(BaseModel):
     id: UUID
     competition_id: UUID
-    user_id: UUID
+    athlete_name: str
     weight: int
-    result: str
+    lift_type: LiftType
+    status: str
+    result: Optional[str]
+    created_at: datetime
 
-    model_config = {
-        "from_attributes": True,
-        "arbitrary_types_allowed": True,
-    }
+    model_config = {"from_attributes": True}
