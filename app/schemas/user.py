@@ -34,3 +34,12 @@ class Token(BaseModel):
     username: Optional[str] = None
     role: Optional[GlobalRole] = None
 
+class UserPublic(BaseModel):
+    id: str
+    username: str
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+
+    model_config = {
+        "from_attributes": True  # аналог orm_mode=True
+    }

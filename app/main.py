@@ -14,7 +14,7 @@ app = FastAPI(title="Weightlifting Competition MVP")
 origins = [
     "http://localhost:5173",   # фронт в dev
     "http://127.0.0.1:5173",
-    "http://10.208.43.224:8000"
+    "http://10.208.43.224:8000",
     "http://10.208.43.224:5173",
 ]
 # Настройка CORS
@@ -36,6 +36,10 @@ app.include_router(attempts.router, prefix="/attempts", tags=["Attempts"]) # Р�
 app.include_router(competition_roles.router)
 app.include_router(users.router)
 app.include_router(judging.router)
+app.include_router(competition_roles.router)
+app.include_router(competitions.router)
+
+
 
 
 

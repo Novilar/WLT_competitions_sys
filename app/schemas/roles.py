@@ -14,3 +14,4 @@ class CompetitionRoleEnum(str, Enum):
     judge = "judge"
     jury_member = "jury_member"
     jury_head = "jury_head"
+    athlete = "athlete"

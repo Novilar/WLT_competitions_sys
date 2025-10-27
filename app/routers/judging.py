@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import Dict, List
 
+
+
 from app.database import get_db
 from app.core.deps import get_current_user
 from app import models
@@ -51,30 +53,38 @@ async def create_attempt(
     competition_id: UUID,
     attempt_in: attempt.AttemptCreate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     db_attempt = models.attempt.Attempt(
         competition_id=competition_id,
-        athlete_name=attempt_in.athlete_name,
+        athlete_id=attempt_in.athlete_id,
         weight=attempt_in.weight,
         lift_type=attempt_in.lift_type,
         status="open",
+        user_id=current_user.id,  # берем текущего пользователя автоматически
     )
     db.add(db_attempt)
     db.commit()
     db.refresh(db_attempt)
 
-    # 🔥 async/await, вместо create_task
     await manager.broadcast(str(competition_id), {
         "type": "attempt_started",
         "attempt": {
             "id": str(db_attempt.id),
-            "athlete_name": db_attempt.athlete_name,
+            "athlete_id": str(db_attempt.athlete_id),
             "weight": db_attempt.weight,
             "lift_type": db_attempt.lift_type,
+            "user_id": str(db_attempt.user_id),
         }
     })
-    return db_attempt
+    from app.models.user import User
+    athlete = db.query(User).filter(User.id == attempt_in.athlete_id).first()
+
+    return attempt.AttemptOut.from_orm(db_attempt).copy(
+        update={"athlete_name": athlete.full_name if athlete else None}
+    )
+
+
 
 @router.get("/attempts/current", response_model=attempt.AttemptOut | None)
 async def get_current_attempt(competition_id: UUID, db: Session = Depends(get_db)):
@@ -174,11 +184,26 @@ async def submit_vote(
 
 @router.get("/attempts", response_model=list[attempt.AttemptOut])
 async def get_attempts(competition_id: UUID, db: Session = Depends(get_db)):
-    return (
-        db.query(models.attempt.Attempt)
+    from app.models.user import User  # импорт внутри, чтобы не было циклов
+
+    attempts = (
+        db.query(
+            models.attempt.Attempt,
+            User.full_name.label("athlete_name")
+        )
+        .join(User, User.id == models.attempt.Attempt.athlete_id)
         .filter(models.attempt.Attempt.competition_id == competition_id)
         .all()
     )
+
+    # превращаем результат в список Pydantic-схем
+    return [
+        attempt.AttemptOut(
+            **a.Attempt.__dict__,
+            athlete_name=a.athlete_name
+        )
+        for a in attempts
+    ]
 
 @router.get("/attempts/{attempt_id}/votes")
 def get_attempt_votes(

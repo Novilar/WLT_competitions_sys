@@ -4,6 +4,8 @@ from uuid import UUID
 from app import models, schemas
 from app.database import get_db
 from app.core.deps import require_superadmin_or_own_competition
+from app.core.security import get_current_user
+
 
 router = APIRouter(
     prefix="/competition_roles",

@@ -1,24 +1,31 @@
 from pydantic import BaseModel
-from uuid import UUID
 from typing import Optional
-from datetime import datetime
-from app.models.attempt import LiftType
+from enum import Enum
+from uuid import UUID
 
 
-class AttemptCreate(BaseModel):
-    athlete_name: str
-    weight: int
+class LiftType(str, Enum):
+    snatch = "snatch"   # рывок
+    clean_jerk = "clean_jerk"  # толчок
+
+
+class AttemptBase(BaseModel):
+    weight: float
     lift_type: LiftType
 
 
-class AttemptOut(BaseModel):
+class AttemptCreate(AttemptBase):
+    athlete_id: UUID  # участник, которому принадлежит попытка
+
+
+class AttemptOut(AttemptBase):
     id: UUID
+    user_id: UUID
+    athlete_id: UUID
+    athlete_name: Optional[str] = None
     competition_id: UUID
-    athlete_name: str
-    weight: int
-    lift_type: LiftType
-    status: str
-    result: Optional[str]
-    created_at: datetime
+    result: Optional[str] = None
+    status: Optional[str] = None
 
-    model_config = {"from_attributes": True}
+    class Config:
+        orm_mode = True

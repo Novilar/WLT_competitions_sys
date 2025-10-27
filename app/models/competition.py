@@ -18,6 +18,6 @@ class Competition(Base):
         back_populates="competition",
         cascade="all, delete-orphan"
     )
-
+    competition_roles = relationship("CompetitionRole", back_populates="competition")
     applications = relationship("Application", back_populates="competition", cascade="all, delete-orphan")
 

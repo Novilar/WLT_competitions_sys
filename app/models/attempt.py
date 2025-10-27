@@ -19,11 +19,10 @@ class Attempt(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     competition_id = Column(UUID(as_uuid=True), ForeignKey("competitions.id"), nullable=False)
-
-    athlete_name = Column(String, nullable=False)
+    athlete_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     weight = Column(Integer, nullable=False)
     lift_type = Column(String, nullable=False)  # snatch / clean_and_jerk
-
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)  # ✅ Добавляем это поле
     status = Column(String, default="open")  # open/closed
     result = Column(String, nullable=True)   # passed/failed
 
