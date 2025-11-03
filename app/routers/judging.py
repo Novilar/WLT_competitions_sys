@@ -55,13 +55,43 @@ async def create_attempt(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    # 🛑 Проверка: есть ли уже активная попытка
+    active_attempt = (
+        db.query(models.attempt.Attempt)
+        .filter_by(competition_id=competition_id, status="open")
+        .first()
+    )
+    if active_attempt:
+        raise HTTPException(
+            status_code=400,
+            detail="Нельзя создать новую попытку, пока предыдущая не завершена."
+        )
+
+    # 🛑 Проверка: не превышено ли число попыток (максимум 3)
+    existing_attempts = (
+        db.query(models.attempt.Attempt)
+        .filter(
+            models.attempt.Attempt.competition_id == competition_id,
+            models.attempt.Attempt.athlete_id == attempt_in.athlete_id,
+            models.attempt.Attempt.lift_type == attempt_in.lift_type,
+        )
+        .count()
+    )
+
+    if existing_attempts >= 3:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Нельзя добавить более трёх попыток для упражнения '{attempt_in.lift_type}'.",
+        )
+
+    # ✅ Создаем новую попытку
     db_attempt = models.attempt.Attempt(
         competition_id=competition_id,
         athlete_id=attempt_in.athlete_id,
         weight=attempt_in.weight,
         lift_type=attempt_in.lift_type,
         status="open",
-        user_id=current_user.id,  # берем текущего пользователя автоматически
+        user_id=current_user.id,
     )
     db.add(db_attempt)
     db.commit()
@@ -77,12 +107,15 @@ async def create_attempt(
             "user_id": str(db_attempt.user_id),
         }
     })
+
+    # 🟢 возвращаем с именем спортсмена
     from app.models.user import User
     athlete = db.query(User).filter(User.id == attempt_in.athlete_id).first()
 
     return attempt.AttemptOut.from_orm(db_attempt).copy(
         update={"athlete_name": athlete.full_name if athlete else None}
     )
+
 
 
 
@@ -216,3 +249,84 @@ def get_attempt_votes(
         {"user_id": str(v.user_id), "vote": bool(v.vote), "role": v.role}
         for v in votes
     ]
+
+# ----------------- РЕЗУЛЬТАТЫ СОРЕВНОВАНИЙ -----------------
+@router.get("/results")
+async def get_competition_results(competition_id: UUID, db: Session = Depends(get_db)):
+    """
+    Возвращает таблицу результатов:
+    - 3 попытки рывка и толчка
+    - лучший результат
+    - сумма
+    - место
+    """
+
+    from app.models.user import User
+
+    # 1️⃣ Загружаем все попытки соревнования
+    attempts = (
+        db.query(models.attempt.Attempt)
+        .filter(models.attempt.Attempt.competition_id == competition_id)
+        .order_by(models.attempt.Attempt.created_at)
+        .all()
+    )
+
+    if not attempts:
+        return []
+
+    # 2️⃣ Группируем попытки по атлету
+    athletes: dict[UUID, dict] = {}
+
+    for a in attempts:
+        athlete = athletes.setdefault(a.athlete_id, {
+            "athlete_id": str(a.athlete_id),
+            "athlete_name": None,
+            "snatch_attempts": [],
+            "clean_jerk_attempts": [],
+        })
+
+        # добавляем вес и успешность (если решено)
+        if a.lift_type == "snatch":
+            athlete["snatch_attempts"].append({
+                "weight": a.weight,
+                "result": a.result
+            })
+        elif a.lift_type in ("clean_jerk", "clean_and_jerk"):
+            athlete["clean_jerk_attempts"].append({
+                "weight": a.weight,
+                "result": a.result
+            })
+
+    # 3️⃣ Подставляем имена атлетов
+    user_ids = [a for a in athletes.keys() if a]
+    users = db.query(User).filter(User.id.in_(user_ids)).all()
+    for u in users:
+        if u.id in athletes:
+            athletes[u.id]["athlete_name"] = u.full_name
+
+    # 4️⃣ Подсчёт лучших результатов и суммы
+    for athlete in athletes.values():
+        snatch_best = max(
+            [a["weight"] for a in athlete["snatch_attempts"] if a["result"] == "passed"],
+            default=0,
+        )
+        cj_best = max(
+            [a["weight"] for a in athlete["clean_jerk_attempts"] if a["result"] == "passed"],
+            default=0,
+        )
+
+        athlete["snatch_best"] = snatch_best
+        athlete["clean_jerk_best"] = cj_best
+        athlete["total"] = snatch_best + cj_best
+
+    # 5️⃣ Сортировка и присвоение мест
+    sorted_athletes = sorted(
+        athletes.values(),
+        key=lambda x: x["total"],
+        reverse=True
+    )
+
+    for i, a in enumerate(sorted_athletes, start=1):
+        a["place"] = i
+
+    return sorted_athletes

@@ -4,6 +4,7 @@ from enum import Enum
 class GlobalRole(str, Enum):
     super_admin = "super_admin"
     athlete = "athlete"
+    organizer = "organizer"
 
 
 class CompetitionRoleEnum(str, Enum):
