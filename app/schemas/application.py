@@ -1,24 +1,28 @@
 from pydantic import BaseModel
-from typing import Optional
-from enum import Enum
 from uuid import UUID
-
-class ApplicationStatus(str, Enum):
-    pending = "pending"
-    approved = "approved"
-    rejected = "rejected"
+from datetime import datetime
+from typing import List, Optional
+from .application_athlete import ApplicationAthleteCreate, ApplicationAthleteOut
+from .application_staff import ApplicationStaffCreate, ApplicationStaffOut
 
 class ApplicationBase(BaseModel):
-    competition_id: UUID
-    status: Optional[ApplicationStatus] = ApplicationStatus.pending
-    profile: Optional[str] = None
+    federation_name: Optional[str] = None
+    type: str = "preliminary"
 
 class ApplicationCreate(ApplicationBase):
-    pass
+    athletes: List[ApplicationAthleteCreate]
+    staff: List[ApplicationStaffCreate]
+
+class ApplicationUpdate(ApplicationBase):
+    athletes: List[ApplicationAthleteCreate]
 
 class ApplicationOut(ApplicationBase):
     id: UUID
-    user_id: UUID
+    competition_id: UUID
+    submitted_by: UUID
+    submitted_at: datetime
+    athletes: List[ApplicationAthleteOut]
+    staff: List[ApplicationStaffOut]
 
     class Config:
         orm_mode = True

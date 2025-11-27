@@ -5,26 +5,28 @@ from uuid import UUID
 
 from app import models, schemas
 from app.database import get_db
-from app.core.deps import get_current_user   # ✅ добавлено
-from app.schemas.user import UserPublic
+from app.core.deps import get_current_user
+from app.models import Competition
+from app.schemas.competition import CompetitionOut
 
 router = APIRouter()
 
-# ✅ создание соревнования только супер-админом или организатором
+
+# ============================================================
+# 🟢 СОЗДАНИЕ СОРЕВНОВАНИЯ (только супер-админ или организатор)
+# ============================================================
 @router.post("/", response_model=schemas.competition.CompetitionOut)
 def create_competition(
     comp: schemas.competition.CompetitionCreate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    # 🔒 Проверяем права
     if current_user.global_role not in ("super_admin", "organizer"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Недостаточно прав для создания соревнования",
         )
 
-    # ✅ Создаём соревнование
     db_comp = models.competition.Competition(
         name=comp.name,
         date=comp.date,
@@ -34,7 +36,6 @@ def create_competition(
     db.commit()
     db.refresh(db_comp)
 
-    # ✅ Если это организатор — присваиваем ему роль "organizer" на это соревнование
     if current_user.global_role == "organizer":
         organizer_role = models.competition_role.CompetitionRole(
             competition_id=db_comp.id,
@@ -47,13 +48,28 @@ def create_competition(
     return db_comp
 
 
-# ✅ Получить все соревнования
+# ============================================================
+# 🟦 ПОЛУЧИТЬ ВСЕ СОРЕВНОВАНИЯ
+# ============================================================
 @router.get("/", response_model=list[schemas.competition.CompetitionOut])
 def get_competitions(db: Session = Depends(get_db)):
     return db.query(models.competition.Competition).all()
 
 
-# ✅ Получить участников конкретного соревнования
+# ============================================================
+# 🟩 ПОЛУЧИТЬ ОДНО СОРЕВНОВАНИЕ (важно! используется фронтом)
+# ============================================================
+@router.get("/{competition_id}", response_model=CompetitionOut)
+def get_competition(competition_id: UUID, db: Session = Depends(get_db)):
+    comp = db.query(Competition).filter_by(id=competition_id).first()
+    if not comp:
+        raise HTTPException(status_code=404, detail="Competition not found")
+    return comp
+
+
+# ============================================================
+# 🟨 ПОЛУЧИТЬ ВСЕХ УЧАСТНИКОВ СОРЕВНОВАНИЯ
+# ============================================================
 @router.get("/{competition_id}/participants")
 def get_competition_participants(competition_id: UUID, db: Session = Depends(get_db)):
     roles = db.query(models.CompetitionRole).filter(
@@ -62,7 +78,7 @@ def get_competition_participants(competition_id: UUID, db: Session = Depends(get
     ).all()
 
     if not roles:
-        raise HTTPException(status_code=404, detail="Участники не найдены")
+        return []  # ⚠ лучше вернуть пустой список, а не 404
 
     user_ids = [r.user_id for r in roles]
     users = db.query(models.User).filter(models.User.id.in_(user_ids)).all()
@@ -75,50 +91,3 @@ def get_competition_participants(competition_id: UUID, db: Session = Depends(get
         }
         for u in users
     ]
-
-
-'''@router.get("/competitions/{competition_id}/results")
-def get_competition_results(competition_id: UUID, db: Session = Depends(get_db)):
-    # Получаем всех участников
-    athlete_roles = db.query(models.CompetitionRole).filter_by(
-        competition_id=competition_id, role="athlete"
-    ).all()
-    athlete_ids = [r.user_id for r in athlete_roles]
-
-    # Загружаем пользователей
-    users = db.query(models.User).filter(models.User.id.in_(athlete_ids)).all()
-    users_map = {u.id: u.full_name for u in users}
-
-    # Загружаем все попытки
-    attempts = db.query(models.Attempt).filter_by(competition_id=competition_id).all()
-
-    # Формируем результаты по каждому участнику
-    results = []
-    for athlete_id in athlete_ids:
-        athlete_attempts = [a for a in attempts if a.athlete_id == athlete_id and a.result == "passed"]
-
-        snatch_attempts = [a.weight for a in athlete_attempts if a.lift_type == "snatch"]
-        cj_attempts = [a.weight for a in athlete_attempts if a.lift_type == "clean_jerk"]
-
-        best_snatch = max(snatch_attempts, default=0)
-        best_cj = max(cj_attempts, default=0)
-        total = best_snatch + best_cj if best_snatch and best_cj else 0
-
-        results.append({
-            "athlete_id": str(athlete_id),
-            "athlete_name": users_map.get(athlete_id, "—"),
-            "snatch_attempts": sorted(snatch_attempts, reverse=True),
-            "clean_jerk_attempts": sorted(cj_attempts, reverse=True),
-            "best_snatch": best_snatch,
-            "best_clean_jerk": best_cj,
-            "total": total
-        })
-
-    # Сортируем по общему результату (total)
-    results = sorted(results, key=lambda x: x["total"], reverse=True)
-
-    # Добавляем место
-    for i, r in enumerate(results, start=1):
-        r["place"] = i if r["total"] > 0 else None
-
-    return results '''

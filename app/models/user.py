@@ -16,4 +16,8 @@ class User(Base):
     global_role = Column(String, default=GlobalRole.athlete.value)  # хранится как строка
 
     competition_roles = relationship("CompetitionRole", back_populates="user", cascade="all, delete-orphan")
-    applications = relationship("Application", back_populates="user", cascade="all, delete-orphan")
+    applications = relationship(
+        "Application",
+        back_populates="user",
+        foreign_keys="Application.user_id"
+    )
