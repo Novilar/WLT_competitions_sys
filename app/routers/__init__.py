@@ -1,1 +1,1 @@
-from app.routers import auth, competitions, applications, draw, attempts, users, judging
+from app.routers import auth, competitions, applications, draw, attempts, users, judging, result

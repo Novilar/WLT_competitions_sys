@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Date
+from sqlalchemy import Column, String, Date, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -11,6 +11,7 @@ class Competition(Base):
     name = Column(String, nullable=False)
     date = Column(Date, nullable=False)
     location = Column(String, nullable=False)
+    draw_done = Column(Boolean, default=False)
 
     # связь с CompetitionRole
     competition_roles = relationship(

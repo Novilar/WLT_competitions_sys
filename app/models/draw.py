@@ -17,7 +17,7 @@ class CompetitionDrawEntry(Base):
     competition_id = Column(UUID(as_uuid=True), ForeignKey("competitions.id"), nullable=False)
     athlete_id = Column(UUID(as_uuid=True), ForeignKey("application_athletes.id"), nullable=False)
 
-    gender = Column(String(1), nullable=False)
+    gender = Column(String(10), nullable=False)
     weight_category = Column(String(10), nullable=False)
 
     group_letter = Column(String(2), nullable=False)

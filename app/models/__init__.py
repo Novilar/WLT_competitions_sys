@@ -1,4 +1,4 @@
-from app.models import user, competition, application, draw, attempt, vote
+from app.models import user, competition, application, draw, attempt
 from app.models.competition_role import CompetitionRole
 from .user import User
 from .competition import Competition
@@ -11,3 +11,5 @@ from .application_staff import ApplicationStaff
 from .application_event import ApplicationEvent
 from .notification import Notification
 from app.models.enums import ApplicationStatus, ApplicationType
+from app.models.draw import CompetitionDrawEntry
+from app.models.vote import Vote
